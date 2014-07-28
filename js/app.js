@@ -1,23 +1,70 @@
-var triviaApp = angular.module('triviaApp', []);
+var triviaApp = angular.module('triviaApp', ['firebase', 'ngRoute']);
 
-triviaApp.controller('QuestionListCtrl', function($scope) {
-	$scope.questions = [
-		{
-			id: 1,
-			question: "Why is AngularJS named AngularJS?",
-			option1: "It sounds cool.",
-			option2: "It describes HTML brackets.",
-			option3: "No one ones."
-			answer: "2"
-		}, 
+triviaApp.config(['$routeProvider', function($routeProvider) {
+	$routeProvider.
+		when('/questions', {
+			templateUrl: 'partials/question-list.html',
+			controller: 'QuestionListCtrl'
+		}).
+		when('/questions/new', {
+			templateUrl: 'partials/question-form.html',
+			controller: 'QuestionNewCtrl'
+		}).
+		when('/questions/:questionId', {
+			templateUrl: 'partials/question-form.html',
+			controller: 'QuestionDetailCtrl'
+		}).
+		otherwise({
+			redirectTo: '/questions'
+		});
+}]);
 
-		{
-			id: 2,
-			question: "Why does AngularJS use the namespace ng?",
-			option1: "It stands for n gage (engage).",
-			option2: "It's the initials of the original author.",
-			option3: "It sounds like angular."
-			answer: "3"
-		}
-	]
-});
+triviaApp.controller('QuestionDetailCtrl', ['$scope', '$firebase', '$routeParams', '$location', function($scope, $firebase, $routeParams, $location) {
+	var firebaseUrl = "https://torid-fire-6735.firebaseio.com/questions/" + $routeParams.questionId;
+	$scope.question = $firebase(new Firebase(firebaseUrl));
+
+	$scope.persistQuestion = function(question) {
+		$scope.question.$update({
+			question: question.question,
+			option1: question.option1,
+			option2: question.option2,
+			option3: question.option3,
+			answer: question.answer
+		}).then(function(ref) {
+			$location.url('/questions');
+		});
+	};
+}]);
+
+triviaApp.controller('QuestionListCtrl', ["$scope", "$firebase", "$window", function($scope, $firebase, $window) {
+	var firebaseUrl = "https://torid-fire-6735.firebaseio.com/questions";
+	$scope.questions = $firebase(new Firebase(firebaseUrl));
+
+	$scope.deleteQuestion = function(questionId) {
+		$scope.questions.$remove(questionId);
+	};
+
+	$scope.answerQuestion = function(question, selectedAnswer) {
+		question.answered = true;
+		question.correct = (question.answer == selectedAnswer);
+	};
+
+}]);
+
+triviaApp.controller('QuestionNewCtrl', ['$scope', '$firebase', '$location', function($scope, $firebase, $location) {
+	$scope.question = {};
+
+	$scope.persistQuestion = function(question) {
+		var firebaseUrl = "https://torid-fire-6735.firebaseio.com/questions";
+		$scope.questions = $firebase(new Firebase(firebaseUrl));
+		$scope.questions.$add(question).then(function(ref) {
+			$location.url('/questions');
+		});
+	};
+}]);
+
+triviaApp.controller("GreetingCtrl", ["$scope", "$window", function($scope, $window) {
+	// $scope.greeting = function(word) {
+	// 	$window.alert(word);
+	// };
+}]);
